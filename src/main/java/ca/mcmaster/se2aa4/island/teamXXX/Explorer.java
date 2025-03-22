@@ -38,17 +38,13 @@ public class Explorer implements IExplorerRaid {
         echo = new Echo();
         
         phase1 = new Phase1(battery, initialHeading, fly, echo);
-
     }
 
     @Override
     public String takeDecision() {
-        
         JSONObject decision = new JSONObject();
-        JSONObject parameter = new JSONObject();
-        parameter = phase1.makeDecision(decision);
-    
-        logger.info("** Decision: {}",parameter.toString());
+        JSONObject parameter = phase1.makeDecision(decision);
+        logger.info("** Decision: {}", parameter.toString());
         return parameter.toString();
     }
 
@@ -67,9 +63,7 @@ public class Explorer implements IExplorerRaid {
         logger.info("Battery level is now: " + battery.getBattery());
         
         echoReader = new EchoReader(response);
-        phase1.getEchoReader(echoReader);
-
-
+        phase1.setEchoReader(echoReader);
     }
 
     @Override

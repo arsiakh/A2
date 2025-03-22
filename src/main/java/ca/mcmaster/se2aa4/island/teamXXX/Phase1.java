@@ -12,15 +12,11 @@ and create grid)
 
 public class Phase1 {
     private boolean lastActionWasEcho = false;
-
-
-
-
+    private boolean waitingForEchoResponse = false;
     private Battery battery;
-
     private int flyCount;
     private int halfWayPoint;
-    private int distanceToMap; 
+    private int totalDistance; // Total distance to fly after second echo
     private Heading heading;
     private Direction direction;
     private Echo echo;
@@ -34,47 +30,58 @@ public class Phase1 {
         this.battery = battery;
         this.flyCount = 0; 
         this.halfWayPoint = 0;
-        this.distanceToMap = 0;
+        this.totalDistance = 0;
         this.direction = heading.getCurrentDirection();
-       
-        
-        
-
-
-
     }
 
-    public EchoReader getEchoReader(EchoReader echoReader) {
+    public void setEchoReader(EchoReader echoReader) {
         this.echoReader = echoReader;
-        return this.echoReader;
+        if (waitingForEchoResponse) {
+            try {
+                if (echoReader != null) {
+                    if (flyCount == 1) {
+                        // First echo - set halfway point
+                        halfWayPoint = this.echoReader.getRange() / 2;
+                    } else if (flyCount == halfWayPoint + 1) {
+                        // Second echo - set total distance to fly
+                        totalDistance = this.echoReader.getRange();
+                    }
+                } else {
+                    if (flyCount == 1) {
+                        halfWayPoint = 5;
+                    } else if (flyCount == halfWayPoint + 1) {
+                        totalDistance = 5;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Warning: Couldn't get range from echo response");
+                if (flyCount == 1) {
+                    halfWayPoint = 5;
+                } else if (flyCount == halfWayPoint + 1) {
+                    totalDistance = 5;
+                }
+            }
+            waitingForEchoResponse = false;
+        }
     }
 
     public JSONObject makeDecision(JSONObject decision) {
-        // First step: Always echo east if this is the first action
+        // First action: Echo East
         if (flyCount == 0) {
             echo.actionTakenDirection(decision, direction);
-            lastActionWasEcho = true;
+            waitingForEchoResponse = true;
             flyCount++;
             return decision;
         }
         
-        // Only try to get range if the last action was an echo
-        if (lastActionWasEcho) {
-            try {
-                halfWayPoint = this.echoReader.getRange() / 2;
-                lastActionWasEcho = false; // Reset the flag
-            } catch (Exception e) {
-                // Handle the case where range isn't available
-                System.out.println("Warning: Couldn't get range from echo response");
-                // Set a default halfway point if we can't get it from the response
-                halfWayPoint = 5; // Or some other default value
-            }
+        // If we're waiting for an echo response, we can't make a decision yet
+        if (waitingForEchoResponse) {
+            return decision;
         }
         
         // Now handle the next action based on flyCount
         if (flyCount < halfWayPoint) {
             fly.actionTaken(decision);
-            lastActionWasEcho = false;
             flyCount++;
             return decision;
         }
@@ -82,25 +89,24 @@ public class Phase1 {
             direction = heading.turnRight(); // Facing SOUTH now
             heading.actionTakenDirection(decision, direction);
             echo.actionTakenDirection(decision, direction);
-            lastActionWasEcho = true;
+            waitingForEchoResponse = true;
             flyCount++;
             return decision;
         }
-        else if (flyCount > halfWayPoint && flyCount < (this.echoReader.getRange() + halfWayPoint)) {
+        else if (flyCount > halfWayPoint && flyCount < (halfWayPoint + totalDistance)) {
             fly.actionTaken(decision);
-            lastActionWasEcho = false;
             flyCount++;
             return decision;
         }
         else {
             // Default action if no conditions match
             fly.actionTaken(decision);
-            lastActionWasEcho = false;
             flyCount++;
             return decision;
         }
     }}
-/* 
+
+    /* 
     public JSONObject makeDecision(JSONObject decision) {
        
             if (flyCount == 0) {  //always starts at top left corner facing East
