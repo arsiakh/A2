@@ -2,7 +2,7 @@ package ca.mcmaster.se2aa4.island.teamXXX;
 
 import org.json.JSONObject;
 
-public class Heading implements DroneControl{
+public class Heading implements DroneControlDirection{
     private Direction currentDirection;
     private Direction newDirection;
     
@@ -28,18 +28,19 @@ public class Heading implements DroneControl{
         return newDirection;
     }
 
-    public void actionTaken() {
+    public JSONObject actionTakenDirection(JSONObject command, Direction direction) {
         // Prevent U-turns by checking if new direction is opposite to current
-        if (isOppositeDirection(currentDirection, newDirection)) {
+        if (isOppositeDirection(currentDirection, direction)) {
             throw new IllegalArgumentException("Cannot make immediate U-turn. Use intermediate turns.");
         }
         
-        JSONObject command = new JSONObject();
+
         command.put("action", "heading");
-        command.put("parameters", new JSONObject().put("direction", newDirection.toString()));
+        command.put("parameters", new JSONObject().put("direction", direction.toString()));
         
         // Update current direction after command creation
-        this.currentDirection = newDirection;
+        this.currentDirection = direction;
+        return command;
         
         
     }
@@ -47,10 +48,10 @@ public class Heading implements DroneControl{
 
 
     public boolean isOppositeDirection(Direction dir1, Direction dir2) {
-        return (dir1 == Direction.NORTH && dir2 == Direction.SOUTH) ||
-               (dir1 == Direction.SOUTH && dir2 == Direction.NORTH) ||
-               (dir1 == Direction.EAST && dir2 == Direction.WEST) ||
-               (dir1 == Direction.WEST && dir2 == Direction.EAST);
+        return (dir1 == Direction.N && dir2 == Direction.S) ||
+               (dir1 == Direction.S && dir2 == Direction.N) ||
+               (dir1 == Direction.E && dir2 == Direction.W) ||
+               (dir1 == Direction.W && dir2 == Direction.E);
     }
 
 }

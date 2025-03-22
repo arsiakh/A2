@@ -1,7 +1,7 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
-public interface DroneControl {
-    public void actionTaken();
+import org.json.JSONObject;
 
-    
+public interface DroneControl {
+    public JSONObject actionTaken(JSONObject command);
 }

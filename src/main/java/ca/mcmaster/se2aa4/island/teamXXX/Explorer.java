@@ -3,6 +3,7 @@ package ca.mcmaster.se2aa4.island.teamXXX;
 import java.io.StringReader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.json.JsonConfiguration;
 
 import eu.ace_design.island.bot.IExplorerRaid;
 import org.json.JSONObject;
@@ -11,6 +12,14 @@ import org.json.JSONTokener;
 public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
+    private Battery battery;
+    private Navigator navigator;
+    private Heading initialHeading;
+    private Phase1 phase1;
+    private EchoReader echoReader;
+    private Echo echo; 
+    private Fly fly; 
+    
 
     @Override
     public void initialize(String s) {
@@ -21,14 +30,26 @@ public class Explorer implements IExplorerRaid {
         Integer batteryLevel = info.getInt("budget");
         logger.info("The drone is facing {}", direction);
         logger.info("Battery level is {}", batteryLevel);
+
+        initialHeading = new Heading(Direction.valueOf(direction));
+        battery = new Battery(batteryLevel);
+        navigator = new Navigator(initialHeading, battery);
+        fly = new Fly();
+        echo = new Echo();
+        
+        phase1 = new Phase1(battery, initialHeading, fly, echo);
+
     }
 
     @Override
     public String takeDecision() {
+        
         JSONObject decision = new JSONObject();
-        decision.put("action", "stop"); // we stop the exploration immediately
-        logger.info("** Decision: {}",decision.toString());
-        return decision.toString();
+        JSONObject parameter = new JSONObject();
+        parameter = phase1.makeDecision(decision);
+    
+        logger.info("** Decision: {}",parameter.toString());
+        return parameter.toString();
     }
 
     @Override
@@ -41,6 +62,14 @@ public class Explorer implements IExplorerRaid {
         logger.info("The status of the drone is {}", status);
         JSONObject extraInfo = response.getJSONObject("extras");
         logger.info("Additional information received: {}", extraInfo);
+
+        battery.consumeBattery(response);
+        logger.info("Battery level is now: " + battery.getBattery());
+        
+        echoReader = new EchoReader(response);
+        phase1.getEchoReader(echoReader);
+
+
     }
 
     @Override

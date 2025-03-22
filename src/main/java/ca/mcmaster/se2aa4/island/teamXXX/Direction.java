@@ -1,15 +1,15 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
 public enum Direction {
-    NORTH, EAST, SOUTH, WEST;
+    N, E, S, W;
     
     // Get the next clockwise direction
     public Direction turnRight() {
         switch(this) {
-            case NORTH: return EAST;
-            case EAST: return SOUTH;
-            case SOUTH: return WEST;
-            case WEST: return NORTH;
+            case N: return E;
+            case E: return S;
+            case S: return W;
+            case W: return N;
             default: return this;
         }
     }
@@ -17,10 +17,10 @@ public enum Direction {
     // Get the next counter-clockwise direction
     public Direction turnLeft() {
         switch(this) {
-            case NORTH: return WEST;
-            case WEST: return SOUTH;
-            case SOUTH: return EAST;
-            case EAST: return NORTH;
+            case N: return W;
+            case W: return S;
+            case S: return E;
+            case E: return N;
             default: return this;
         }
     }
