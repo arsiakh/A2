@@ -12,7 +12,6 @@ public class Phase2 {
     private int flyCount;
     private int remainingFlights;
     private Heading heading;
-    private Direction direction;
     private Scan scanner;
     private ScanReader scanReader;
     private Echo echo;
@@ -22,8 +21,6 @@ public class Phase2 {
     private String foundSite;
     private boolean scanningComplete;
     private boolean reachedIsland;
-    private boolean scanningUp; // true if scanning up, false if scanning down
-    private boolean needToTurn; // true if we hit ocean and need to turn
 
     public Phase2(Battery battery, Heading heading, Fly fly, Scan scan, Echo echo) {
         this.scanner = scan;
@@ -38,29 +35,9 @@ public class Phase2 {
         this.scanningComplete = false;
         this.reachedIsland = true;
         this.initialEchoDone = false;
-        this.scanningUp = true; // Start scanning up
-        this.needToTurn = false;
-        this.direction = heading.getCurrentDirection();
     }
 
-    public void setEchoReader(EchoReader echoReader) {
-        this.echoReader = echoReader;
-        if (waitingForEchoResponse) {
-            try {
-                if (echoReader != null) {
-                    System.out.println("Echo response received. Range: " + echoReader.getRange());
-                    if (echoReader.getRange() == 0) {
-                        initialEchoDone = true;
-                        System.out.println("Reached range 0, starting scan phase");
-                    }
-                }
-            } catch (Exception e) {
-                System.out.println("Warning: Couldn't process echo results");
-                e.printStackTrace();
-            }
-            waitingForEchoResponse = false;
-        }
-    }
+    
 
     public void setScanReader(ScanReader scanReader) {
         this.scanReader = scanReader;
@@ -68,17 +45,8 @@ public class Phase2 {
             try {
                 if (scanReader != null) {
                     System.out.println("Scan response received. Has Ocean: " + scanReader.hasOcean());
-                    if (scanReader.hasOcean()) {
-                        needToTurn = true;
-                        // Turn left or right based on scanning direction
-                        if (scanningUp) {
-                            direction = heading.turnLeft();
-                        } else {
-                            direction = heading.turnRight();
-                        }
-                        heading.actionTakenDirection(new JSONObject(), direction);
-                    }
-                    
+                    System.out.println("On island. Has Creeks: " + scanReader.hasCreeks());
+                    System.out.println("Has Emergency Site: " + scanReader.hasEmergencySite());
                     if (scanReader.hasCreeks()) {
                         foundCreeks.addAll(scanReader.getCreeks());
                         System.out.println("Found creeks: " + foundCreeks);
@@ -108,19 +76,9 @@ public class Phase2 {
             return decision;
         }
 
-        // First, do an initial echo to verify we're on the island
-        if (!initialEchoDone) {
-            echo.actionTakenDirection(decision, direction);
-            waitingForEchoResponse = true;
-            return decision;
-        }
+        
 
-        // If we need to turn after hitting ocean
-        if (needToTurn) {
-            heading.actionTakenDirection(decision, direction);
-            needToTurn = false;
-            return decision;
-        }
+        
 
         // If flyCount is a multiple of 3, perform a scan
         if (flyCount % 3 == 0) {
