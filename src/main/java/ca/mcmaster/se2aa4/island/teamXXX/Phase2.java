@@ -15,6 +15,9 @@ public class Phase2 {
     private Scan scanner;
     private ScanReader scanReader;
     private Echo echo;
+    private Position currentPosition;
+    private int stepsInCurrentRow;
+    private int maxStepsPerRow;
     private EchoReader echoReader;
     private Fly fly;
     private List<String> foundCreeks;
@@ -71,28 +74,60 @@ public class Phase2 {
     }
 
     public JSONObject makeDecision(JSONObject decision) {
+        // 1) If scanning is done, stop
         if (scanningComplete) {
             decision.put("action", "stop");
             return decision;
         }
-
         
-
-        
-
-        // If flyCount is a multiple of 3, perform a scan
+        // 2) If it's time to scan
         if (flyCount % 3 == 0) {
             scanner.actionTaken(decision);
             waitingForScanResponse = true;
-            flyCount++; // Increment after scanning
+            flyCount++;
             return decision;
         }
-
-        // Otherwise, fly
+        
+        // 3) Otherwise, fly forward
         fly.actionTaken(decision);
+        updatePosition(); // move forward based on heading
         flyCount++;
+        stepsInCurrentRow++;
+        
+        // 4) Check if we need to turn around
+        //    or if we detect ocean from the last scan, etc.
+        if (stepsInCurrentRow >= maxStepsPerRow /* or hasOcean from last scan */) {
+            // Turn around in a zigzag:
+            // Turn right twice to face backward
+            heading.turnRight();
+            heading.turnRight();
+            // (Optionally) move one step to shift row
+            // Then turn right or left again to face original direction
+            
+            stepsInCurrentRow = 0;
+        }
+        
         return decision;
     }
+
+    private void updatePosition() {
+        Direction dir = heading.getCurrentDirection();
+        switch (dir) {
+            case E:
+                currentPosition.setX(currentPosition.getX() + 1);
+                break;
+            case W:
+                currentPosition.setX(currentPosition.getX() - 1);
+                break;
+            case N:
+                currentPosition.setY(currentPosition.getY() - 1);
+                break;
+            case S:
+                currentPosition.setY(currentPosition.getY() + 1);
+                break;
+        }
+    }
+    
 
     public boolean isScanningComplete() {
         return scanningComplete;
