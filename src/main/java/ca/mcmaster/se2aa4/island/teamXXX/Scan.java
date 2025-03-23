@@ -2,6 +2,7 @@ package ca.mcmaster.se2aa4.island.teamXXX;
 
 import org.json.JSONObject;
 
+//Returning the command 
 public class Scan implements DroneControl {
 
     @Override
