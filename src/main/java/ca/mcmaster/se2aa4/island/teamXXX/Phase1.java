@@ -115,7 +115,7 @@ public class Phase1 {
             flyCount++; 
             return decision;
         }
-        else if (totalDistance > 0 && flyCount < (halfWayPoint + 2 + totalDistance)) {
+        else if (totalDistance > 0 && flyCount < (halfWayPoint + 3 + totalDistance)) {
             fly.actionTaken(decision);
             flyCount++;
             return decision;

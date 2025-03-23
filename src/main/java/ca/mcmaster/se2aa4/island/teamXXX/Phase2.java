@@ -3,27 +3,36 @@ package ca.mcmaster.se2aa4.island.teamXXX;
 import org.json.JSONObject;
 import java.util.List;
 import java.util.ArrayList;
+import ca.mcmaster.se2aa4.island.teamXXX.Battery;
+import ca.mcmaster.se2aa4.island.teamXXX.Heading;
+import ca.mcmaster.se2aa4.island.teamXXX.Echo;
+import ca.mcmaster.se2aa4.island.teamXXX.Fly;
+import ca.mcmaster.se2aa4.island.teamXXX.Scan;
+import ca.mcmaster.se2aa4.island.teamXXX.ScanReader;
+import ca.mcmaster.se2aa4.island.teamXXX.Direction;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Phase2 {
+    private final Logger logger = LogManager.getLogger();
     private boolean waitingForScanResponse = false;
-    private boolean waitingForEchoResponse = false;
-    private boolean initialEchoDone = false;
     private Battery battery;
     private int flyCount;
-    private int remainingFlights;
     private Heading heading;
+    private Direction direction;
     private Scan scanner;
     private ScanReader scanReader;
     private Echo echo;
-    private Position currentPosition;
-    private int stepsInCurrentRow;
-    private int maxStepsPerRow;
-    private EchoReader echoReader;
     private Fly fly;
     private List<String> foundCreeks;
     private String foundSite;
     private boolean scanningComplete;
-    private boolean reachedIsland;
+    private boolean scanningUp; // true if scanning up, false if scanning down
+    private boolean needToTurn; // true if we hit ocean and need to turn
+    private boolean needSecondTurn; // true if we need to make the second turn after flying
+    private Direction firstTurnDirection; // stores the direction from the first turn
+    private boolean needToFlyAfterTurn; // true if we need to fly after a turn
+    private int flysAfterTurn; // count of flys after a turn
 
     public Phase2(Battery battery, Heading heading, Fly fly, Scan scan, Echo echo) {
         this.scanner = scan;
@@ -32,102 +41,134 @@ public class Phase2 {
         this.heading = heading;
         this.battery = battery;
         this.flyCount = 0;
-        this.remainingFlights = 0;
         this.foundCreeks = new ArrayList<>();
         this.foundSite = null;
         this.scanningComplete = false;
-        this.reachedIsland = true;
-        this.initialEchoDone = false;
+        this.scanningUp = false; // Start scanning down
+        this.needToTurn = false;
+        this.needSecondTurn = false;
+        this.direction = heading.getCurrentDirection();
+        this.flysAfterTurn = 0;
     }
-
-    
 
     public void setScanReader(ScanReader scanReader) {
         this.scanReader = scanReader;
         if (waitingForScanResponse) {
             try {
                 if (scanReader != null) {
-                    System.out.println("Scan response received. Has Ocean: " + scanReader.hasOcean());
-                    System.out.println("On island. Has Creeks: " + scanReader.hasCreeks());
-                    System.out.println("Has Emergency Site: " + scanReader.hasEmergencySite());
+                    logger.info("Scan response received. Has Ocean: " + scanReader.hasOcean());
+                    logger.info("Biomes size: " + scanReader.getBiomes().size());
+                    logger.info("Current scanningUp value: " + scanningUp);
+                    
+                    if (scanReader.hasOcean() && scanReader.getBiomes().size() == 1) { //contains only ocean and nothing else 
+                        logger.info("Detected only ocean, setting needToTurn to true");
+                        needToTurn = true;
+                        
+                    } else {
+                        logger.info("No turn needed - either no ocean or mixed biomes");
+                    }
+                    
                     if (scanReader.hasCreeks()) {
                         foundCreeks.addAll(scanReader.getCreeks());
-                        System.out.println("Found creeks: " + foundCreeks);
+                        logger.info("Found creeks: " + foundCreeks);
                     }
                     
                     if (scanReader.hasEmergencySite()) {
                         foundSite = scanReader.getEmergencySite();
-                        System.out.println("Found emergency site: " + foundSite);
+                        logger.info("Found emergency site: " + foundSite);
                     }
                     
                     if (!foundCreeks.isEmpty() && foundSite != null) {
                         scanningComplete = true;
-                        System.out.println("Scanning complete! Found all required items.");
+                        logger.info("Scanning complete! Found all required items.");
                     }
+                } else {
+                    logger.warn("Warning: scanReader is null");
                 }
             } catch (Exception e) {
-                System.out.println("Warning: Couldn't process scan results");
-                e.printStackTrace();
+                logger.error("Warning: Couldn't process scan results", e);
             }
             waitingForScanResponse = false;
+            logger.info("Finished processing scan response. needToTurn: " + needToTurn);
+        } else {
+            logger.info("Received scan response but not waiting for one");
         }
     }
 
     public JSONObject makeDecision(JSONObject decision) {
-        // 1) If scanning is done, stop
         if (scanningComplete) {
             decision.put("action", "stop");
             return decision;
         }
-        
-        // 2) If it's time to scan
-        if (flyCount % 3 == 0) {
-            scanner.actionTaken(decision);
-            waitingForScanResponse = true;
+
+        // If we need to make the first turn
+        if (needToTurn) {
+            logger.info("Making first turn. Scanning up: " + scanningUp);
+            Direction newDirection;
+            if (scanningUp) {
+                newDirection = heading.turnRight(); // When going up, turn right
+            } else {
+                newDirection = heading.turnLeft(); // When going down, turn left
+            }
+            heading.actionTakenDirection(decision, newDirection);
+            needToTurn = false;
+            needSecondTurn = true; // Set up for second turn
+            return decision;
+        }
+
+        // If we need to make the second turn
+        if (needSecondTurn) {
+            logger.info("Making second turn. Scanning up: " + scanningUp);
+            Direction newDirection;
+            if (scanningUp) {
+                newDirection = heading.turnRight(); // When going up, turn right again
+            } else {
+                newDirection = heading.turnLeft(); // When going down, turn left again
+            }
+            heading.actionTakenDirection(decision, newDirection);
+            needSecondTurn = false;
+            needToFlyAfterTurn = true; // Set up for flying after turn
+            flysAfterTurn = 0; // Reset fly counter
+            scanningUp = !scanningUp; // Toggle scanning direction
+            return decision;
+        }
+
+        // If we need to fly after a turn
+        if (needToFlyAfterTurn) {
+            logger.info("Flying after turn. Count: " + flysAfterTurn);
+            fly.actionTaken(decision);
+            flyCount++;
+            flysAfterTurn++;
+            if (flysAfterTurn >= 3) {
+                needToFlyAfterTurn = false;
+                
+            }
+            return decision;
+        }
+
+        // If we're waiting for a scan response, send a fly action
+        if (waitingForScanResponse) {
+            logger.info("Waiting for scan response, flying...");
+            fly.actionTaken(decision);
             flyCount++;
             return decision;
         }
-        
-        // 3) Otherwise, fly forward
-        fly.actionTaken(decision);
-        updatePosition(); // move forward based on heading
-        flyCount++;
-        stepsInCurrentRow++;
-        
-        // 4) Check if we need to turn around
-        //    or if we detect ocean from the last scan, etc.
-        if (stepsInCurrentRow >= maxStepsPerRow /* or hasOcean from last scan */) {
-            // Turn around in a zigzag:
-            // Turn right twice to face backward
-            heading.turnRight();
-            heading.turnRight();
-            // (Optionally) move one step to shift row
-            // Then turn right or left again to face original direction
-            
-            stepsInCurrentRow = 0;
+
+        // If flyCount is a multiple of 3, perform a scan
+        if (flyCount % 3 == 0 && needToFlyAfterTurn == false) {
+            logger.info("Performing scan at flyCount: " + flyCount);
+            scanner.actionTaken(decision);
+            waitingForScanResponse = true;
+            flyCount++; // Increment after scanning
+            return decision;
         }
-        
+
+        // Otherwise, fly
+        logger.info("Flying at flyCount: " + flyCount);
+        fly.actionTaken(decision);
+        flyCount++;
         return decision;
     }
-
-    private void updatePosition() {
-        Direction dir = heading.getCurrentDirection();
-        switch (dir) {
-            case E:
-                currentPosition.setX(currentPosition.getX() + 1);
-                break;
-            case W:
-                currentPosition.setX(currentPosition.getX() - 1);
-                break;
-            case N:
-                currentPosition.setY(currentPosition.getY() - 1);
-                break;
-            case S:
-                currentPosition.setY(currentPosition.getY() + 1);
-                break;
-        }
-    }
-    
 
     public boolean isScanningComplete() {
         return scanningComplete;
