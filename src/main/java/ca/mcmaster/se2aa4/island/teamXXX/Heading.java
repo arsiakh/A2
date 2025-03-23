@@ -4,28 +4,25 @@ import org.json.JSONObject;
 
 public class Heading implements DroneControlDirection{
     private Direction currentDirection;
-    private Direction newDirection;
     
     public Heading(Direction initialDirection) {
         this.currentDirection = initialDirection;
     }
     
-    public Direction getNewDirection(Direction newDirection) { 
-        return newDirection;
-    }
+
 
     public Direction getCurrentDirection() {
         return currentDirection;
     }
 
     public Direction turnRight() {
-        Direction newDirection = currentDirection.turnRight();
-        return newDirection;
+        currentDirection = currentDirection.turnRight();
+        return currentDirection;
     }
 
     public Direction turnLeft() {
-        Direction newDirection = currentDirection.turnLeft();
-        return newDirection;
+        currentDirection = currentDirection.turnLeft();
+        return currentDirection;
     }
 
     public JSONObject actionTakenDirection(JSONObject command, Direction direction) {
@@ -34,15 +31,15 @@ public class Heading implements DroneControlDirection{
             throw new IllegalArgumentException("Cannot make immediate U-turn. Use intermediate turns.");
         }
         
-
-        command.put("action", "heading");
-        command.put("parameters", new JSONObject().put("direction", direction.toString()));
-        
-        // Update current direction after command creation
+        // Update current direction before creating command
         this.currentDirection = direction;
+        
+        command.put("action", "heading");
+        JSONObject parameters = new JSONObject();
+        parameters.put("direction", direction.toString()); 
+        command.put("parameters", parameters);
+        
         return command;
-        
-        
     }
 
 

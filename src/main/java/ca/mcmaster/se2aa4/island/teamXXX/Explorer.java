@@ -19,7 +19,9 @@ public class Explorer implements IExplorerRaid {
     private EchoReader echoReader;
     private Echo echo; 
     private Fly fly; 
-    
+    private Scan scan;
+    private ScanReader scanReader;
+    private Phase2 phase2;
 
     @Override
     public void initialize(String s) {
@@ -36,8 +38,11 @@ public class Explorer implements IExplorerRaid {
         navigator = new Navigator(initialHeading, battery);
         fly = new Fly();
         echo = new Echo();
+        scan = new Scan();
+        phase2 = new Phase2(battery, initialHeading, fly, scan, echo);
+        phase1 = new Phase1(battery, initialHeading, fly, echo, scan, phase2);
         
-        phase1 = new Phase1(battery, initialHeading, fly, echo);
+        
     }
 
     @Override
@@ -64,6 +69,7 @@ public class Explorer implements IExplorerRaid {
         
         echoReader = new EchoReader(response);
         phase1.setEchoReader(echoReader);
+        phase2.setScanReader(scanReader);
     }
 
     @Override

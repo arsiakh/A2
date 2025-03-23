@@ -22,8 +22,13 @@ public class Phase1 {
     private Echo echo;
     private EchoReader echoReader;
     private Fly fly;
+    private boolean phase1Complete;
+    private Phase2 phase2;
+    private Scan scan;
+    private int range;
+    private int remainingFlights;
 
-    public Phase1(Battery battery, Heading heading, Fly fly, Echo echo) {
+    public Phase1(Battery battery, Heading heading, Fly fly, Echo echo, Scan scan, Phase2 phase2) {
         this.echo = echo;
         this.fly = fly;
         this.heading = heading;
@@ -32,6 +37,11 @@ public class Phase1 {
         this.halfWayPoint = 0;
         this.totalDistance = 0;
         this.direction = heading.getCurrentDirection();
+        this.phase1Complete = false;
+        this.scan = scan;
+        this.phase2 = phase2;
+        this.range = 0;
+        this.remainingFlights = 0;
     }
 
     public void setEchoReader(EchoReader echoReader) {
@@ -42,9 +52,10 @@ public class Phase1 {
                     if (flyCount == 1) {
                         // First echo - set halfway point
                         halfWayPoint = this.echoReader.getRange() / 2;
-                    } else if (flyCount == halfWayPoint + 1) {
+                    } else if (flyCount == halfWayPoint + 2) {
                         // Second echo - set total distance to fly
                         totalDistance = this.echoReader.getRange();
+                        System.out.println("Second echo range: " + totalDistance);
                     }
                 } else {
                     if (flyCount == 1) {
@@ -66,6 +77,11 @@ public class Phase1 {
     }
 
     public JSONObject makeDecision(JSONObject decision) {
+        // If Phase1 is complete and Phase2 is initialized, delegate to Phase2
+        if (phase1Complete && phase2 != null) {
+            return phase2.makeDecision(decision);
+        }
+
         // First action: Echo East
         if (flyCount == 0) {
             echo.actionTakenDirection(decision, direction);
@@ -74,8 +90,10 @@ public class Phase1 {
             return decision;
         }
         
-        // If we're waiting for an echo response, we can't make a decision yet
+        // If we're waiting for an echo response, send a fly action
         if (waitingForEchoResponse) {
+            fly.actionTaken(decision);
+            flyCount++;
             return decision;
         }
         
@@ -88,23 +106,42 @@ public class Phase1 {
         else if (flyCount == halfWayPoint) {
             direction = heading.turnRight(); // Facing SOUTH now
             heading.actionTakenDirection(decision, direction);
-            echo.actionTakenDirection(decision, direction);
-            waitingForEchoResponse = true;
             flyCount++;
             return decision;
         }
-        else if (flyCount > halfWayPoint && flyCount < (halfWayPoint + totalDistance)) {
+        else if (flyCount == halfWayPoint + 1) { 
+            echo.actionTakenDirection(decision, direction);
+            waitingForEchoResponse = true;
+            flyCount++; 
+            return decision;
+        }
+        else if (totalDistance > 0 && flyCount < (halfWayPoint + 2 + totalDistance)) {
             fly.actionTaken(decision);
             flyCount++;
             return decision;
         }
         else {
-            // Default action if no conditions match
-            fly.actionTaken(decision);
-            flyCount++;
-            return decision;
+            // Phase1 is complete, initialize Phase2 and make first decision
+            phase1Complete = true;
+            if (phase2 != null) {
+                return phase2.makeDecision(decision);
+            } else {
+                fly.actionTaken(decision); // Fallback if phase2 is null
+                return decision;
+            }
         }
-    }}
+    }
+
+    public boolean isPhase1Complete() {
+        return phase1Complete;
+    }
+
+    public void setScanReader(ScanReader scanReader) {
+        if (phase2 != null) {
+            phase2.setScanReader(scanReader);
+        }
+    }
+}
 
     /* 
     public JSONObject makeDecision(JSONObject decision) {

@@ -1,58 +1,142 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import org.json.JSONArray;
 
 public class ScanReader {
-
     private JSONObject results;
-
+    private static final String BEACH = "BEACH";
+    private static final String OCEAN = "OCEAN";
+    
     public ScanReader(JSONObject results) {
         this.results = results;
     }
-
+    
     /**
-     * Returns the list of biomes detected beneath the drone.
+     * Gets the list of biomes from the scan results
+     * @return List of biome names
      */
     public List<String> getBiomes() {
-        JSONArray biomesArray = results.getJSONObject("extras").getJSONArray("biomes");
         List<String> biomes = new ArrayList<>();
+        JSONObject extraInfo = results.getJSONObject("extras");
+        JSONArray biomesArray = extraInfo.getJSONArray("biomes");
+        
         for (int i = 0; i < biomesArray.length(); i++) {
             biomes.add(biomesArray.getString(i));
         }
         return biomes;
     }
-
+    
     /**
-     * Returns the list of creek UIDs detected at this location.
+     * Gets the list of creek IDs from the scan results
+     * @return List of creek IDs
      */
     public List<String> getCreeks() {
-        JSONArray creeksArray = results.getJSONObject("extras").optJSONArray("creeks");
         List<String> creeks = new ArrayList<>();
-        if (creeksArray != null) {
-            for (int i = 0; i < creeksArray.length(); i++) {
-                creeks.add(creeksArray.getString(i));
-            }
+        JSONObject extraInfo = results.getJSONObject("extras");
+        JSONArray creeksArray = extraInfo.getJSONArray("creeks");
+        
+        for (int i = 0; i < creeksArray.length(); i++) {
+            creeks.add(creeksArray.getString(i));
         }
         return creeks;
     }
-
+    
     /**
-     * Returns the emergency site UID if present, otherwise null.
+     * Gets the emergency site ID from the scan results
+     * @return The emergency site ID if present, null otherwise
      */
     public String getEmergencySite() {
-        JSONArray sitesArray = results.getJSONObject("extras").optJSONArray("sites");
-        if (sitesArray != null && sitesArray.length() > 0) {
+        JSONObject extraInfo = results.getJSONObject("extras");
+        JSONArray sitesArray = extraInfo.getJSONArray("sites");
+        if (sitesArray.length() > 0) {
             return sitesArray.getString(0);
         }
         return null;
     }
-
-    @Override
-    public String toString() {
-        return "Biomes: " + getBiomes() + ", Creeks: " + getCreeks() + ", EmergencySite: " + getEmergencySite();
+    
+    /**
+     * Checks if the scan detected a beach biome
+     * @return true if beach biome is present, false otherwise
+     */
+    public boolean hasBeach() {
+        return getBiomes().contains(BEACH);
+    }
+    
+    /**
+     * Checks if the scan detected an ocean biome (edge of map)
+     * @return true if ocean biome is present, false otherwise
+     */
+    public boolean hasOcean() {
+        return getBiomes().contains(OCEAN);
+    }
+    
+    /**
+     * Checks if the scan detected any creeks
+     * @return true if creeks are present, false otherwise
+     */
+    public boolean hasCreeks() {
+        return !getCreeks().isEmpty();
+    }
+    
+    /**
+     * Checks if the scan detected the emergency site
+     * @return true if emergency site is present, false otherwise
+     */
+    public boolean hasEmergencySite() {
+        return getEmergencySite() != null;
+    }
+    
+    /**
+     * Checks if the current location is on the island (not ocean)
+     * @return true if on island, false if in ocean
+     */
+    public boolean isOnIsland() {
+        return !hasOcean();
+    }
+    
+    /**
+     * Gets all scan results in a single object
+     * @return a ScanResult object containing all scan data
+     */
+    public ScanResult getScanResult() {
+        List<String> biomes = getBiomes();
+        List<String> creeks = getCreeks();
+        String emergencySite = getEmergencySite();
+        return new ScanResult(biomes, creeks, emergencySite);
+    }
+    
+    /**
+     * Inner class to hold all scan results
+     */
+    public static class ScanResult {
+        private final List<String> biomes;
+        private final List<String> creeks;
+        private final String emergencySite;
+        
+        public ScanResult(List<String> biomes, List<String> creeks, String emergencySite) {
+            this.biomes = biomes;
+            this.creeks = creeks;
+            this.emergencySite = emergencySite;
+        }
+        
+        public List<String> getBiomes() {
+            return biomes;
+        }
+        
+        public List<String> getCreeks() {
+            return creeks;
+        }
+        
+        public String getEmergencySite() {
+            return emergencySite;
+        }
+        
+        @Override
+        public String toString() {
+            return "Biomes: " + biomes + ", Creeks: " + creeks + ", Emergency Site: " + emergencySite;
+        }
     }
 }
