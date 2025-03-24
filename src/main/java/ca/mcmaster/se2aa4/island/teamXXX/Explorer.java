@@ -23,6 +23,8 @@ public class Explorer implements IExplorerRaid {
     private ScanReader scanReader;
     private Phase2 phase2;
     private Stop stop;
+    private Phase3 phase3;
+    private Phase4 phase4;
     @Override
     public void initialize(String s) {
         logger.info("** Initializing the Exploration Command Center");
@@ -42,8 +44,9 @@ public class Explorer implements IExplorerRaid {
         stop = new Stop();
         phase2 = new Phase2(battery, initialHeading, fly, scan, echo);
         phase1 = new Phase1(battery, initialHeading, fly, echo, scan, phase2);
-        
-        
+        phase3 = new Phase3(battery, initialHeading, fly, scan, echo, phase2);
+        phase4 = new Phase4(battery, initialHeading, fly, scan, echo, phase3);
+        // Phase3 will be created by Phase2 when needed
     }
 
     @Override
@@ -70,8 +73,14 @@ public class Explorer implements IExplorerRaid {
         
         echoReader = new EchoReader(response);
         phase1.setEchoReader(echoReader);
+        phase2.setEchoReader(echoReader);
         scanReader = new ScanReader(response);
         phase2.setScanReader(scanReader);
+        
+        phase4.setScanReader(scanReader);
+        phase4.setEchoReader(echoReader);
+        
+        
     }
 
     @Override

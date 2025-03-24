@@ -1,37 +1,7 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
 import org.json.JSONObject;
-/* 
-public class EchoReader {
-    private JSONObject results;
-    private String ground;
-    private String notGround;
-    private int range;
 
-    public EchoReader(JSONObject results) { 
-        this.results = results;
-        this.ground = "";
-        this.notGround ="";
-        this.range = 0;
-
-    }
-
-    public int getDistance() { 
-        JSONObject extraInfo = results.getJSONObject("extras");
-        range = extraInfo.getInt("range");
-        return range;
-    }
-
-    public String readResults() { 
-        JSONObject extraInfo = results.getJSONObject("extras");
-        String found = extraInfo.getString("found");
-
-        return found;
-        
-    }
-    
-}
- */
 public class EchoReader { //uses adapter DP 
     private JSONObject results;
     private static final String GROUND = "GROUND";

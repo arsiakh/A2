@@ -5,7 +5,6 @@ import org.json.JSONObject;
 public class Echo implements DroneControlDirection {
 
    
-
     public JSONObject actionTakenDirection(JSONObject decision, Direction direction) { 
 
         decision.put("action", "echo");

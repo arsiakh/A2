@@ -4,7 +4,6 @@ import org.json.JSONObject;
 
 public class Fly implements DroneControl {
     
-
     public JSONObject actionTaken(JSONObject command) { 
         command.put("action", "fly");
 

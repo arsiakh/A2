@@ -1,6 +1,8 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
 import org.json.JSONObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /*
 Contains structure of island converted from JSON format to 2D Matrix format
@@ -11,12 +13,12 @@ and create grid)
  */
 
 public class Phase1 {
-    private boolean lastActionWasEcho = false;
+    private final Logger logger = LogManager.getLogger();
     private boolean waitingForEchoResponse = false;
+    private boolean shouldFlyNext = true; // Track if we should fly next
+    private boolean hasTurnedSouth = false; // Track if we've turned South
     private Battery battery;
     private int flyCount;
-    private int halfWayPoint;
-    private int totalDistance; // Total distance to fly after second echo
     private Heading heading;
     private Direction direction;
     private Echo echo;
@@ -25,23 +27,21 @@ public class Phase1 {
     private boolean phase1Complete;
     private Phase2 phase2;
     private Scan scan;
-    private int range;
-    private int remainingFlights;
+    private boolean foundGround = false;
+    private int groundRange = 0; // Store the range when we find ground
 
     public Phase1(Battery battery, Heading heading, Fly fly, Echo echo, Scan scan, Phase2 phase2) {
         this.echo = echo;
         this.fly = fly;
         this.heading = heading;
         this.battery = battery;
-        this.flyCount = 0; 
-        this.halfWayPoint = 0;
-        this.totalDistance = 0;
+        this.flyCount = 0;
         this.direction = heading.getCurrentDirection();
         this.phase1Complete = false;
         this.scan = scan;
         this.phase2 = phase2;
-        this.range = 0;
-        this.remainingFlights = 0;
+        this.shouldFlyNext = true; // Start with flying
+        this.hasTurnedSouth = false;
     }
 
     public void setEchoReader(EchoReader echoReader) {
@@ -49,87 +49,62 @@ public class Phase1 {
         if (waitingForEchoResponse) {
             try {
                 if (echoReader != null) {
-                    if (flyCount == 1) {
-                        // First echo - set halfway point
-                        halfWayPoint = this.echoReader.getRange() / 2;
-                    } else if (flyCount == halfWayPoint + 2) {
-                        // Second echo - set total distance to fly
-                        totalDistance = this.echoReader.getRange();
-                        System.out.println("Second echo range: " + totalDistance);
-                    }
-                } else {
-                    if (flyCount == 1) {
-                        halfWayPoint = 5;
-                    } else if (flyCount == halfWayPoint + 1) {
-                        totalDistance = 5;
+                    // Check if we've found ground
+                    if (echoReader.isGround()) {
+                        foundGround = true;
+                        groundRange = echoReader.getRange();
+                        System.out.println("Found ground! Range: " + groundRange);
                     }
                 }
             } catch (Exception e) {
                 System.out.println("Warning: Couldn't get range from echo response");
-                if (flyCount == 1) {
-                    halfWayPoint = 5;
-                } else if (flyCount == halfWayPoint + 1) {
-                    totalDistance = 5;
-                }
             }
             waitingForEchoResponse = false;
+            shouldFlyNext = true; // After receiving echo response, we fly next
         }
     }
 
     public JSONObject makeDecision(JSONObject decision) {
         // If Phase1 is complete and Phase2 is initialized, delegate to Phase2
         if (phase1Complete && phase2 != null) {
+            logger.info("Phase1 is complete, delegating to Phase2");
             return phase2.makeDecision(decision);
         }
 
-        // First action: Echo East
-        if (flyCount == 0) {
-            echo.actionTakenDirection(decision, direction);
-            waitingForEchoResponse = true;
-            flyCount++;
-            return decision;
-        }
-        
-        // If we're waiting for an echo response, send a fly action
-        if (waitingForEchoResponse) {
-            fly.actionTaken(decision);
-            flyCount++;
-            return decision;
-        }
-        
-        // Now handle the next action based on flyCount
-        if (flyCount < halfWayPoint) {
-            fly.actionTaken(decision);
-            flyCount++;
-            return decision;
-        }
-        else if (flyCount == halfWayPoint) {
-            direction = heading.turnRight(); // Facing SOUTH now
+        // If we haven't found ground yet and haven't turned South, turn South
+        if (foundGround && !hasTurnedSouth) {
+            logger.info("Ground found, turning South");
+            direction = heading.turnRight();
             heading.actionTakenDirection(decision, direction);
-            flyCount++;
+            hasTurnedSouth = true;
             return decision;
         }
-        else if (flyCount == halfWayPoint + 1) { 
-            echo.actionTakenDirection(decision, direction);
-            waitingForEchoResponse = true;
-            flyCount++; 
-            return decision;
-        }
-        else if (totalDistance > 0 && flyCount < (halfWayPoint + 3 + totalDistance)) {
+        
+        // If we should fly next (alternating pattern)
+        if (shouldFlyNext) {
+            logger.info("Phase1: Flying, count = " + flyCount);
             fly.actionTaken(decision);
             flyCount++;
+            shouldFlyNext = false; // After flying, echo next
             return decision;
         }
-        else {
-            // Phase1 is complete, initialize Phase2 and make first decision
-            phase1Complete = true;
-            if (phase2 != null) {
-                return phase2.makeDecision(decision);
-            } else {
-                fly.actionTaken(decision); // Fallback if phase2 is null
-                return decision;
+        
+        // After finding ground, fly until we reach the ground range
+        if (flyCount <= groundRange) {
+            logger.info("Phase1: Flying towards ground, count = " + flyCount + ", target = " + groundRange);
+            fly.actionTaken(decision);
+            flyCount++;
+            if (flyCount == groundRange) {
+                logger.info("REACHED GROUND! Phase1 complete.");
+                phase1Complete = true;
             }
+            return decision;
         }
+        
+        logger.info("Phase1: Echoing South to find ground");
+        echo.actionTakenDirection(decision, Direction.S);
+        waitingForEchoResponse = true;
+        return decision;
     }
 
     public boolean isPhase1Complete() {
@@ -142,83 +117,3 @@ public class Phase1 {
         }
     }
 }
-
-    /* 
-    public JSONObject makeDecision(JSONObject decision) {
-       
-            if (flyCount == 0) {  //always starts at top left corner facing East
-                echo.actionTakenDirection(decision, direction); //echoes East initially first 
-                flyCount++;
-                return decision;
-            }   
-            
-            
-            
-            if (flyCount > 0) { 
-                halfWayPoint = (this.echoReader.getRange() / 2); //half way point of echo range
-                if (flyCount < halfWayPoint) { 
-                    fly.actionTaken(decision); //fly until half way point
-                    flyCount++;
-                }
-                
-                
-            }
-            else if (flyCount == halfWayPoint) { 
-                direction = heading.turnRight(); //facing SOUTH now 
-                heading.actionTakenDirection(decision, direction); //drone now faces South
-                echo.actionTakenDirection(decision, direction); //echoes SOUTH
-                flyCount++;
-                return decision; 
-                
-            }
-            else if (flyCount > halfWayPoint && flyCount < ((this.echoReader.getRange())+halfWayPoint)) { 
-                fly.actionTaken(decision); //fly towards the map
-                flyCount++;
-            }
-            else if (flyCount == distanceToMap) { 
-                //arrived at map can move on to next phase
-            
-
-        }
-    
-        
-
-    
-    return decision;
-}}
-
-
-------------------
-
-        if (flyCount == 0) {
-            decision.put("action", "echo");
-
-            JSONObject parameters = new JSONObject();
-            parameters.put("direction", "E");
-
-            decision.put("parameters", parameters);
-            flyCount++;
-        } else
-
-        if (flyCount > 0 && flyCount < maxFlyCount) {
-            decision.put("action", "fly");
-            flyCount++;
-        } else if (flyCount == maxFlyCount) {
-            decision.put("action", "echo");
-
-            JSONObject parameters = new JSONObject();
-            parameters.put("direction", "S");
-
-            decision.put("parameters", parameters);
-            flyCount++;
-        }
-        else if (flyCount > maxFlyCount) {
-            decision.put("action", "stop");
-        }
-
-        return decision;
-    }
-    }
-*/
-    
-

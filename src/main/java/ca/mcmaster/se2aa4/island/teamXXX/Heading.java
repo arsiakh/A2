@@ -10,7 +10,6 @@ public class Heading implements DroneControlDirection{
     }
     
 
-
     public Direction getCurrentDirection() {
         return currentDirection;
     }
