@@ -11,37 +11,30 @@ public class EchoReader { //uses adapter DP
         this.results = results;
     }
     
-    /**
-     * Determines if the echo detected ground or not
-     * @return true if ground was detected, false if not_ground
-     */
+  
+    //Determines if the echo detected ground or not
     public boolean isGround() {
         String found = readResults();
         return GROUND.equals(found);
     }
     
-    /**
-     * Gets the range value from the results
-     * @return the range value as an integer
-     */
+    
+    //Gets the range value from the results
     public int getRange() { 
         JSONObject extraInfo = results.getJSONObject("extras");
         return extraInfo.getInt("range");
     }
 
-    /**
-     * Gets the type of surface that was detected
-     * @return "ground" or "not_ground"
-     */
+    
+    //Gets the type of surface that was detected
+    
     public String readResults() { 
         JSONObject extraInfo = results.getJSONObject("extras");
         return extraInfo.getString("found");
     }
     
-    /**
-     * Gets both the detection type and range in a single call
-     * @return an EchoResult object containing both the detection type and range
-     */
+
+    //Gets both the detection type and range in a single call
     public EchoResult getEchoResult() {
         boolean isGround = isGround();
         int range = getRange();

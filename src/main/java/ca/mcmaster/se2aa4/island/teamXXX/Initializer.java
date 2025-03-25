@@ -63,7 +63,6 @@ public class Initializer {
             this.site = new EmergencySite();
         }
 
-        // Fluent setters
         public Builder withPhase1(Phase1 phase1) {
             this.phase1 = phase1;
             return this;
@@ -94,6 +93,7 @@ public class Initializer {
         return battery;
     }
 
+    //Getter for Creeks
     public Creeks getCreek() {
         return creek;
     }

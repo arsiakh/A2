@@ -5,7 +5,6 @@ import java.io.StringReader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.json.JsonConfiguration;
 
 import eu.ace_design.island.bot.IExplorerRaid;
 import org.json.JSONObject;
