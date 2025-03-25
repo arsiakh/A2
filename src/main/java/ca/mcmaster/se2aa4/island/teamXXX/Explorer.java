@@ -1,6 +1,8 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
 import java.io.StringReader;
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.json.JsonConfiguration;
@@ -13,18 +15,16 @@ public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
     private Battery battery;
-    private Navigator navigator;
-    private Heading initialHeading;
     private Phase1 phase1;
     private EchoReader echoReader;
-    private Echo echo; 
-    private Fly fly; 
-    private Scan scan;
+   
     private ScanReader scanReader;
     private Phase2 phase2;
-    private Stop stop;
-    private Phase3 phase3;
-    private Phase4 phase4;
+   
+
+
+
+
     @Override
     public void initialize(String s) {
         logger.info("** Initializing the Exploration Command Center");
@@ -35,25 +35,25 @@ public class Explorer implements IExplorerRaid {
         logger.info("The drone is facing {}", direction);
         logger.info("Battery level is {}", batteryLevel);
 
-        initialHeading = new Heading(Direction.valueOf(direction));
-        battery = new Battery(batteryLevel);
-        navigator = new Navigator(initialHeading, battery);
-        fly = new Fly();
-        echo = new Echo();
-        scan = new Scan();
-        stop = new Stop();
-        phase2 = new Phase2(battery, initialHeading, fly, scan, echo);
-        phase1 = new Phase1(battery, initialHeading, fly, echo, scan, phase2);
-        phase3 = new Phase3(battery, initialHeading, fly, scan, echo, phase2);
-        phase4 = new Phase4(battery, initialHeading, fly, scan, echo, phase3);
-        // Phase3 will be created by Phase2 when needed
+        
+        Initializer initializer = new Initializer.Builder(direction, batteryLevel)
+        .build();
+    
+        // Directly use the initialized components
+        this.battery = initializer.getBattery();
+        this.phase1 = initializer.getPhase1();
+        this.phase2 = initializer.getPhase2();     
+        
+
     }
 
     @Override
     public String takeDecision() {
         JSONObject decision = new JSONObject();
-        JSONObject parameter = phase1.makeDecision(decision);
+        
+        JSONObject parameter = this.phase1.makeDecision(decision);
         logger.info("** Decision: {}", parameter.toString());
+        
         return parameter.toString();
     }
 
@@ -67,24 +67,26 @@ public class Explorer implements IExplorerRaid {
         logger.info("The status of the drone is {}", status);
         JSONObject extraInfo = response.getJSONObject("extras");
         logger.info("Additional information received: {}", extraInfo);
-
         battery.consumeBattery(response);
         logger.info("Battery level is now: " + battery.getBattery());
-        
+
+        //initialize readers for each phase to read the response
         echoReader = new EchoReader(response);
-        phase1.setEchoReader(echoReader);
-        phase2.setEchoReader(echoReader);
+        this.phase1.setEchoReader(echoReader);
+        this.phase2.setEchoReader(echoReader);
         scanReader = new ScanReader(response);
-        phase2.setScanReader(scanReader);
+        this.phase2.setScanReader(scanReader);
         
-        phase4.setScanReader(scanReader);
-        phase4.setEchoReader(echoReader);
         
         
     }
 
     @Override
     public String deliverFinalReport() {
+        if(scanReader.getCreeks().size() > 0){
+            logger.info(scanReader.getCreeks().get(0));
+            return scanReader.getCreeks().get(0);
+        }
         return "no creek found";
     }
 

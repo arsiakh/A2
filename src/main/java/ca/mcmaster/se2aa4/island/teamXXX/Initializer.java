@@ -2,7 +2,6 @@ package ca.mcmaster.se2aa4.island.teamXXX;
 
 public class Initializer {
     private Battery battery;
-    private Navigator navigator;
     private Heading initialHeading;
     private Phase1 phase1;
     private Phase2 phase2;
