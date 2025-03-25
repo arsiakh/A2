@@ -1,5 +1,6 @@
 package ca.mcmaster.se2aa4.island.teamXXX;
 
+
 public class Initializer {
     private Battery battery;
     private Heading initialHeading;
@@ -11,6 +12,8 @@ public class Initializer {
     private Scan scan;
     private ScanReader scanReader;
     private Stop stop;
+    private Creeks creek;
+    private EmergencySite site;
     
     private Initializer(Builder builder) {
         this.battery = builder.battery;
@@ -19,11 +22,13 @@ public class Initializer {
         this.echo = builder.echo;
         this.scan = builder.scan;
         this.stop = builder.stop;
+        this.creek = builder.creek;
+        this.site = builder.site;
         
         // Ensure Phase2 is created first
         this.phase2 = builder.phase2 != null 
             ? builder.phase2 
-            : new Phase2(battery, initialHeading, fly, scan, echo, stop);
+            : new Phase2(battery, initialHeading, fly, scan, echo, stop, creek, site);
         
         // Then create Phase1, passing the created Phase2
         this.phase1 = builder.phase1 != null 
@@ -39,6 +44,8 @@ public class Initializer {
         private final Echo echo;
         private final Scan scan;
         private final Stop stop;
+        private final Creeks creek;
+        private final EmergencySite site;  
 
         // Optional parameters
         private Phase1 phase1;
@@ -52,6 +59,8 @@ public class Initializer {
             this.echo = new Echo();
             this.scan = new Scan();
             this.stop = new Stop();
+            this.creek = new Creeks();
+            this.site = new EmergencySite();
         }
 
         // Fluent setters
@@ -83,5 +92,9 @@ public class Initializer {
     // Getter for Battery
     public Battery getBattery() {
         return battery;
+    }
+
+    public Creeks getCreek() {
+        return creek;
     }
 }

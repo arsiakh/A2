@@ -38,16 +38,20 @@ public class Phase2 {
     private int flyCount;
 
     // Found data
+    private Creeks creeks;
+    private EmergencySite site;
     private List<String> foundCreeks;
     private String foundSite;
 
-    public Phase2(Battery battery, Heading heading, Fly fly, Scan scan, Echo echo, Stop stop) {
+    public Phase2(Battery battery, Heading heading, Fly fly, Scan scan, Echo echo, Stop stop, Creeks creeks, EmergencySite site) {
         this.scanner = scan;
         this.fly = fly;
         this.echo = echo;
         this.stop = stop;
         this.heading = heading;
         this.battery = battery;
+        this.creeks = creeks;
+        this.site = site;
 
         // Initialize state flags
         this.direction = heading.getCurrentDirection();
@@ -96,11 +100,13 @@ public class Phase2 {
         // Add found creeks
         if (scanReader.hasCreeks()) {
             foundCreeks.addAll(scanReader.getCreeks());
+            creeks.storeCreeks(foundCreeks);
         }
         
         // Check for emergency site
         if (scanReader.hasEmergencySite()) {
             foundSite = scanReader.getEmergencySite();
+            site.storeEmergencySite(foundSite);
         }
         
         // Mark scanning as complete if both creeks and site are found
@@ -194,7 +200,7 @@ public class Phase2 {
 
     private JSONObject stopScanning(JSONObject decision) {
         logger.info("Phase2: Scanning complete, stopping");
-        logger.info("Phase2: Found creeks: " + foundCreeks);
+        logger.info("Phase2: Found creeks: " + creeks.getCreeks());
         logger.info("Phase2: Found emergency site: " + foundSite);
         stop.actionTaken(decision);
         return decision;

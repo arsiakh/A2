@@ -17,12 +17,9 @@ public class Explorer implements IExplorerRaid {
     private Battery battery;
     private Phase1 phase1;
     private EchoReader echoReader;
-   
     private ScanReader scanReader;
     private Phase2 phase2;
-   
-
-
+    private Creeks creek;
 
 
     @Override
@@ -34,26 +31,21 @@ public class Explorer implements IExplorerRaid {
         Integer batteryLevel = info.getInt("budget");
         logger.info("The drone is facing {}", direction);
         logger.info("Battery level is {}", batteryLevel);
-
         
         Initializer initializer = new Initializer.Builder(direction, batteryLevel)
         .build();
-    
         // Directly use the initialized components
         this.battery = initializer.getBattery();
         this.phase1 = initializer.getPhase1();
-        this.phase2 = initializer.getPhase2();     
-        
-
+        this.phase2 = initializer.getPhase2(); 
+        this.creek = initializer.getCreek();    
     }
 
     @Override
     public String takeDecision() {
         JSONObject decision = new JSONObject();
-        
         JSONObject parameter = this.phase1.makeDecision(decision);
         logger.info("** Decision: {}", parameter.toString());
-        
         return parameter.toString();
     }
 
@@ -75,18 +67,18 @@ public class Explorer implements IExplorerRaid {
         this.phase1.setEchoReader(echoReader);
         this.phase2.setEchoReader(echoReader);
         scanReader = new ScanReader(response);
-        this.phase2.setScanReader(scanReader);
-        
-        
-        
+        this.phase2.setScanReader(scanReader);  
     }
 
     @Override
     public String deliverFinalReport() {
-        if(scanReader.getCreeks().size() > 0){
-            logger.info(scanReader.getCreeks().get(0));
-            return scanReader.getCreeks().get(0);
+        
+        logger.info("The drone is now delivering the final report");
+        if(this.creek.getCreeks().size() > 0){
+            logger.info("Creek found: " + this.creek.getCreeks().get(0));
+            return this.creek.getCreeks().get(0);
         }
+        logger.info("No creek found");
         return "no creek found";
     }
 
